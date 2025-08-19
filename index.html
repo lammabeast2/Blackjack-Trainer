@@ -1,142 +1,109 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Blackjack Trainer — Casino Table</title>
-
+  <meta charset="UTF-8">
+  <title>Blackjack Trainer</title>
   <style>
-    :root{
-      --table:#0b6e30;
-      --panel: rgba(0,0,0,0.55);
-      --accent: #ffd166;
-      --btn: #06c167;
-      --font:"Helvetica Neue", Arial, sans-serif;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: url('https://i.imgur.com/6i1aT3G.jpg') center/cover no-repeat;
+      color: white;
     }
-    html,body{height:100%;margin:0;font-family:var(--font);background:#092;}
-    /* green felt background */
-    body{
-      background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.02), transparent 1px),
-                        linear-gradient(#0b6e30,#095a24);
-      background-size: 600px 600px, auto;
-      color:#fff;
-      -webkit-font-smoothing:antialiased;
+    .table {
+      margin: 20px auto;
+      padding: 20px;
+      border: 2px solid gold;
+      border-radius: 15px;
+      background-color: rgba(0, 100, 0, 0.85);
+      width: 90%;
+      max-width: 800px;
     }
-
-    header{
-      padding:14px 16px;
-      text-align:center;
-      font-weight:700;
-      text-shadow:0 2px 4px rgba(0,0,0,.6);
-    }
-
-    #table {
-      max-width:960px;
-      margin: 12px auto;
-      background: var(--panel);
-      border-radius:16px;
-      padding: 14px;
-      box-shadow: 0 8px 30px rgba(0,0,0,.6);
-      border: 2px solid rgba(255,255,255,0.03);
-    }
-
-    .top-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-    .left, .right { display:flex; gap:8px; align-items:center; }
-
-    .mode { font-size:14px; }
-    .bank { font-size:14px; background:rgba(255,255,255,0.03); padding:6px 10px; border-radius:8px; }
-
-    /* table areas */
-    .dealer, .player {
-      margin-top:14px;
-      text-align:center;
-    }
-    .label { font-size:14px; opacity:.95; margin-bottom:6px; }
-
-    .cards { display:flex; justify-content:center; gap:10px; margin:8px 0; flex-wrap:wrap; }
-    .card-img{ width:78px; height:110px; border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,.6); transform-origin:center; }
-
-    /* facedown card as styled div */
-    .card-back{
-      width:78px; height:110px; border-radius:8px; display:inline-block;
-      background:linear-gradient(180deg,#053b22,#0b6e30);
-      box-shadow: inset 0 0 12px rgba(255,255,255,0.03), 0 6px 18px rgba(0,0,0,.6);
-      border:2px solid rgba(255,255,255,0.03);
-      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 6px, transparent 6px 12px);
-    }
-
-    .controls {
-      display:flex; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap;
+    img {
+      width: 80px;
+      margin: 2px;
     }
     button {
-      padding:12px 18px; font-size:16px; border-radius:10px; border:none; cursor:pointer;
-      box-shadow: 0 6px 14px rgba(0,0,0,.45);
+      margin: 8px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
     }
-    button.primary { background:var(--accent); color:#000; font-weight:800; }
-    button.action { background:var(--btn); color:#fff; }
-    button.secondary { background: rgba(255,255,255,0.06); color:#fff;}
-
-    .coach { margin-top:12px; background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; text-align:center; font-weight:600;}
-    .result { margin-top:10px; font-size:18px; text-align:center; min-height:24px; }
-
-    footer { text-align:center; font-size:12px; opacity:0.8; margin-top:10px;}
-    @media (max-width:520px){
-      .card-img{width:64px;height:90px}
-      .card-back{width:64px;height:90px}
+    #coach { margin-top: 12px; font-weight: bold; color: yellow; white-space: pre-line; }
+    #tabs button { background: gold; }
+    .tab-content { display: none; }
+    .active { display: block; }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: white;
+      color: black;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 6px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <div style="font-size:20px">Blackjack Trainer — Casino Table</div>
-    <div style="font-size:13px; opacity:.9">Practice basic strategy & counting visually</div>
-  </header>
+  <h1>Blackjack Trainer</h1>
 
-  <main id="table" role="main">
-    <div class="top-row">
-      <div class="left">
-        <div class="mode">
-          <label><input type="radio" name="mode" value="free" id="modeFree" checked> Free</label>
-          &nbsp;
-          <label><input type="radio" name="mode" value="practice" id="modePractice"> Practice</label>
-        </div>
-      </div>
+  <!-- Tabs -->
+  <div id="tabs">
+    <button onclick="openTab('game')">Game</button>
+    <button onclick="openTab('reference')">Reference</button>
+  </div>
 
-      <div class="right">
-        <div class="bank">Bankroll: $<span id="bankroll">1000</span></div>
-        <div style="margin-left:6px" class="bank">Bet: $<input id="bet" type="number" value="10" min="1" style="width:68px;border-radius:6px;padding:6px;font-size:14px"></div>
-      </div>
+  <!-- Game Tab -->
+  <div id="game" class="tab-content active">
+    <div class="table">
+      <h2>Dealer</h2>
+      <div id="dealer-cards"></div>
+      <p id="dealer-value"></p>
+      
+      <h2>You</h2>
+      <div id="player-cards"></div>
+      <p id="player-value"></p>
+      
+      <button onclick="hit()">Hit</button>
+      <button onclick="stand()">Stand</button>
+      <button onclick="newGame('free')">New Game (Free Play)</button>
+      <button onclick="newGame('practice')">New Game (Practice)</button>
+      
+      <p id="result"></p>
+      <p id="coach"></p>
     </div>
+  </div>
 
-    <section class="dealer" aria-label="Dealer area">
-      <div class="label">Dealer</div>
-      <div class="cards" id="dealer-cards"></div>
-      <div id="dealer-value" style="opacity:.95;margin-top:6px">Total: —</div>
-    </section>
+  <!-- Reference Tab -->
+  <div id="reference" class="tab-content">
+    <h2>Basic Strategy Chart (Simplified)</h2>
+    <table>
+      <tr><th>Player Total</th><th>Dealer 2–6</th><th>Dealer 7–A</th></tr>
+      <tr><td>8 or less</td><td>Hit</td><td>Hit</td></tr>
+      <tr><td>9</td><td>Double/Hit</td><td>Hit</td></tr>
+      <tr><td>10–11</td><td>Double</td><td>Hit/Double</td></tr>
+      <tr><td>12–16</td><td>Stand</td><td>Hit</td></tr>
+      <tr><td>17+</td><td>Stand</td><td>Stand</td></tr>
+    </table>
 
-    <section class="player" aria-label="Player area">
-      <div class="label">Player</div>
-      <div class="cards" id="player-cards"></div>
-      <div id="player-value" style="opacity:.95;margin-top:6px">Total: —</div>
-    </section>
-
-    <div class="controls">
-      <button id="dealBtn" class="primary">Deal</button>
-      <button id="hitBtn" class="action" disabled>Hit</button>
-      <button id="standBtn" class="action" disabled>Stand</button>
-      <button id="doubleBtn" class="secondary" disabled>Double</button>
-      <button id="splitBtn" class="secondary" disabled>Split</button>
-    </div>
-
-    <div class="coach" id="coach" style="display:none">
-      Coach: <span id="coachText">—</span>
-    </div>
-
-    <div class="result" id="result"></div>
-
-    <footer>Rules: S17 • DAS • 6 decks default (visual demo) • 3:2 Blackjack</footer>
-  </main>
+    <h2>Card Counting (Hi-Lo)</h2>
+    <table>
+      <tr><th>Card</th><th>Count Value</th></tr>
+      <tr><td>2–6</td><td>+1</td></tr>
+      <tr><td>7–9</td><td>0</td></tr>
+      <tr><td>10, J, Q, K, A</td><td>-1</td></tr>
+    </table>
+  </div>
 
   <script src="script.js"></script>
+  <script>
+    function openTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+      document.getElementById(tab).classList.add('active');
+    }
+  </script>
 </body>
 </html>
