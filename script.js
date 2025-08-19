@@ -148,8 +148,8 @@ function dealerHasSoft17(hand){
 // =============================
 // Rendering
 function render() {
-  renderHand("player-cards", playerHands[currentHandIndex]);
-  renderHand("dealer-cards", dealerHand);
+  renderCardImages(playerHands[currentHandIndex], "player-cards");
+  renderCardImages(dealerHand, "dealer-cards");
   document.getElementById("player-value").textContent = "Total: "+handValue(playerHands[currentHandIndex]);
   document.getElementById("dealer-value").textContent = "Total: "+handValue(dealerHand);
   document.getElementById("running-count").textContent = runningCount;
