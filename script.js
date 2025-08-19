@@ -1,127 +1,241 @@
-// Global variables
-let deck = [], player = [], dealer = [];
-let mode = 'free'; // 'free' or 'practice'
+/* script.js
+   Works with index.html above:
+   - realistic card images from deckofcardsapi
+   - Free vs Practice mode
+   - hide dealer hole until reveal
+   - disable/enable controls correctly
+*/
 
-// Card mapping to images
-const ranks = ['2','3','4','5','6','7','8','9','0','J','Q','K','A']; // 0=10
-const suits = ['H','D','C','S']; // Hearts, Diamonds, Clubs, Spades
+// ----- config -----
+const RANKS = ['2','3','4','5','6','7','8','9','0','J','Q','K','A']; // '0' == 10 in deckofcardsapi filenames
+const SUITS = ['H','D','C','S'];
+const CARD_BASE = "https://deckofcardsapi.com/static/img/"; // card images: e.g. "AH.png" or "0H.png" (10 uses '0')
+let deck = [];
+let player = [];
+let dealer = [];
+let dealerHoleHidden = true;
+let banker = {
+  bankroll: 1000
+};
 
-// Build a standard 52-card deck
-function buildDeck() {
-    deck = [];
-    for (let s of suits) {
-        for (let r of ranks) {
-            deck.push(r+s);
-        }
+// ----- DOM -----
+const el = id => document.getElementById(id);
+const dealBtn = el('dealBtn'), hitBtn = el('hitBtn'), standBtn = el('standBtn'),
+      doubleBtn = el('doubleBtn'), splitBtn = el('splitBtn'), coach = el('coach'),
+      coachText = el('coachText'), resultEl = el('result'), bankrollEl = el('bankroll'),
+      betEl = el('bet');
+
+// ----- helpers -----
+function buildDeck(numDecks=1){
+  deck = [];
+  for (let d=0; d<numDecks; d++){
+    for (let s of SUITS){
+      for (let r of RANKS) deck.push(r + s);
     }
-    deck = shuffle(deck);
+  }
+  shuffle(deck);
 }
+function shuffle(a){
+  for (let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function draw(){
+  if (deck.length === 0) buildDeck(1);
+  return deck.pop();
+}
+function cardImageUrl(code){
+  // code example: 'AH','0S' -> url: CARD_BASE + code + '.png'
+  return CARD_BASE + code + ".png";
+}
+function handValue(hand){
+  let total=0, aces=0;
+  for (const c of hand){
+    const r = c[0]; // '0' is 10
+    if (r === 'A') { total += 11; aces++; }
+    else if (['J','Q','K'].includes(r)) total += 10;
+    else if (r === '0') total += 10;
+    else total += parseInt(r,10);
+  }
+  while (total>21 && aces){ total -= 10; aces--; }
+  return total;
+}
+function isBlackjack(hand){ return hand.length===2 && handValue(hand)===21; }
 
-// Shuffle deck
-function shuffle(array) {
-    for (let i=array.length-1; i>0; i--) {
-        const j = Math.floor(Math.random()*(i+1));
-        [array[i], array[j]] = [array[j], array[i]];
+// ----- UI -----
+function render(){
+  // dealer cards
+  const dwrap = el('dealer-cards'); dwrap.innerHTML = '';
+  dealer.forEach((c,i)=>{
+    if (i===1 && dealerHoleHidden){
+      // show back card
+      const back = document.createElement('div');
+      back.className = 'card-back';
+      dwrap.appendChild(back);
+    } else {
+      const img = document.createElement('img');
+      img.className = 'card-img';
+      img.src = cardImageUrl(c);
+      img.alt = c;
+      dwrap.appendChild(img);
     }
-    return array;
+  });
+  el('dealer-value').innerText = dealerHoleHidden ? `Total: ${handValue([dealer[0]])} + ?` : `Total: ${handValue(dealer)}`;
+
+  // player cards
+  const pwrap = el('player-cards'); pwrap.innerHTML = '';
+  player.forEach(c=>{
+    const img = document.createElement('img');
+    img.className = 'card-img';
+    img.src = cardImageUrl(c);
+    img.alt = c;
+    pwrap.appendChild(img);
+  });
+  el('player-value').innerText = `Total: ${handValue(player)}`;
+
+  // buttons logic
+  const inRound = player.length>0 && !allDone();
+  hitBtn.disabled = !inRound;
+  standBtn.disabled = !inRound;
+  doubleBtn.disabled = !(inRound && player.length===2);
+  splitBtn.disabled = !(inRound && player.length===2 && player[0][0]===player[1][0]);
+
+  // coach visibility & bankroll
+  bankrollEl.innerText = banker.bankroll;
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  coach.style.display = mode === 'practice' && inRound ? 'block' : 'none';
+  if (mode === 'practice' && inRound) {
+    coachText.innerText = getCoachText();
+  } else {
+    coachText.innerText = '—';
+  }
 }
 
-// Draw a card from the deck
-function draw() {
-    if (deck.length === 0) buildDeck();
-    return deck.pop();
+function allDone(){
+  // round is done when dealerHoleHidden == false and actions finished (we'll control)
+  // we'll consider done when hit/stand disabled
+  return false; // keep simple; actions managed by enable/disable
 }
 
-// Calculate hand value
-function value(hand) {
-    let total = 0, aces = 0;
-    for (let c of hand) {
-        let rank = c[0];
-        if (rank === '0') rank = '10'; // 10 card
-        if (['J','Q','K'].includes(rank)) total += 10;
-        else if (rank === 'A') { total += 11; aces++; }
-        else total += parseInt(rank);
-    }
-    while (total > 21 && aces) { total -= 10; aces--; }
-    return total;
+// ----- game flow -----
+function startDeal(){
+  // new round
+  const mode = document.querySelector('input[name="mode"]:checked').value;
+  const bet = Math.max(1, parseInt(betEl.value||'10',10));
+  // Prepare deck if small
+  if (deck.length < 15) buildDeck(6); // use 6 decks for more realistic shoe
+  player = [];
+  dealer = [];
+  dealerHoleHidden = true;
+  resultEl.innerText = '';
+
+  // initial deal: P, D up, P, D hole(hidden)
+  player.push(draw()); player.push(draw());
+  dealer.push(draw()); dealer.push(draw());
+
+  render();
+  // enable actions
+  hitBtn.disabled = false; standBtn.disabled = false;
+  doubleBtn.disabled = (player.length!==2);
+  splitBtn.disabled = !(player.length===2 && player[0][0]===player[1][0]);
 }
 
-// Show hands visually
-function show() {
-    const dealerDiv = document.getElementById('dealer-cards');
-    const playerDiv = document.getElementById('player-cards');
-    dealerDiv.innerHTML = '';
-    playerDiv.innerHTML = '';
-
-    dealer.forEach(card => {
-        const img = document.createElement('img');
-        img.src = `https://deckofcardsapi.com/static/img/${card}.png`;
-        dealerDiv.appendChild(img);
-    });
-
-    player.forEach(card => {
-        const img = document.createElement('img');
-        img.src = `https://deckofcardsapi.com/static/img/${card}.png`;
-        playerDiv.appendChild(img);
-    });
-
-    document.getElementById('dealer-value').innerText = "Value: " + value(dealer);
-    document.getElementById('player-value').innerText = "Value: " + value(player);
+function doHit(){
+  player.push(draw());
+  render();
+  if (handValue(player) > 21){
+    // player busts: reveal dealer hole and settle
+    revealDealerAndSettle();
+  }
 }
 
-// Start new game
-function newGame(selectedMode='free') {
-    mode = selectedMode;
-    buildDeck();
-    player = [draw(), draw()];
-    dealer = [draw(), draw()];
-    document.getElementById('result').innerText = '';
-    show();
+function doDouble(){
+  // draw one more for player then stand
+  player.push(draw());
+  render();
+  revealDealerAndSettle();
 }
 
-// Player actions
-function hit() {
-    player.push(draw());
-    if (value(player) > 21) {
-        document.getElementById('result').innerText = "Bust!";
-    }
-    show();
+function doSplit(){
+  // simple implementation: not full splitting support; give alert for now
+  alert("Split is not fully implemented in this demo.");
 }
 
-function stand() {
-    while (value(dealer) < 17) dealer.push(draw());
-    const pv = value(player), dv = value(dealer);
-    let msg = '';
-
-    if (dv > 21) msg = "Dealer Bust! You Win!";
-    else if (pv > dv) msg = "You Win!";
-    else if (pv < dv) msg = "Dealer Wins!";
-    else msg = "Push";
-
-    // Practice Mode check
-    if (mode === 'practice') {
-        const advice = basicStrategy(player, dealer[0]);
-        if (advice !== 'stand' && pv <= 21) msg += `\nBasic Strategy Suggests: ${advice.toUpperCase()}`;
-    }
-
-    document.getElementById('result').innerText = msg;
-    show();
+function doStand(){
+  revealDealerAndSettle();
 }
 
-// Basic Strategy Helper (simplified version)
-function basicStrategy(playerHand, dealerCard) {
-    const playerTotal = value(playerHand);
-    const dealerValueMap = {'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'0':10,'J':10,'Q':10,'K':10,'A':11};
-    const dealerVal = dealerValueMap[dealerCard[0]];
+// reveal hole and let dealer play, then settle
+function revealDealerAndSettle(){
+  dealerHoleHidden = false;
+  // reveal hole card count doesn't need to update since images are always available
+  // Dealer hits to 17 (stand on soft 17)
+  while (handValue(dealer) < 17){
+    dealer.push(draw());
+  }
+  // settle
+  const pval = handValue(player), dval = handValue(dealer);
+  let res = '';
+  if (isBlackjack(player) && !isBlackjack(dealer)) {
+    res = 'Blackjack! You win 3:2';
+    banker.bankroll += Math.floor(parseInt(betEl.value||10,10) * 1.5);
+  } else if (isBlackjack(dealer) && !isBlackjack(player)) {
+    res = 'Dealer has Blackjack — you lose';
+    banker.bankroll -= parseInt(betEl.value||10,10);
+  } else if (pval > 21) {
+    res = 'Bust — you lose';
+    banker.bankroll -= parseInt(betEl.value||10,10);
+  } else if (dval > 21) {
+    res = 'Dealer busts — you win';
+    banker.bankroll += parseInt(betEl.value||10,10);
+  } else if (pval > dval) {
+    res = 'You win';
+    banker.bankroll += parseInt(betEl.value||10,10);
+  } else if (pval < dval) {
+    res = 'You lose';
+    banker.bankroll -= parseInt(betEl.value||10,10);
+  } else {
+    res = 'Push';
+  }
 
-    if (playerTotal >= 17) return 'stand';
-    if (playerTotal <= 11) return 'hit';
-    if (playerTotal >= 12 && playerTotal <= 16) {
-        if (dealerVal >= 7) return 'hit';
-        else return 'stand';
-    }
-    return 'stand';
+  resultEl.innerText = res;
+  render();
+  // disable action buttons (round over)
+  hitBtn.disabled = true; standBtn.disabled = true; doubleBtn.disabled = true; splitBtn.disabled = true;
 }
 
-// Initialize default game
-newGame();
+// ----- Basic strategy helper (simple) -----
+function getCoachText(){
+  // simplified basic strategy for single-hand coaching
+  const dealerUp = dealer[0];
+  const dealerNum = valueOfUpcard(dealerUp);
+  const pTotal = handValue(player);
+  // very simple rules:
+  if (pTotal >= 17) return 'Stand';
+  if (pTotal <= 11) return 'Hit';
+  if (pTotal >= 12 && pTotal <= 16){
+    if (dealerNum >= 7) return 'Hit';
+    return 'Stand';
+  }
+  return 'Stand';
+}
+function valueOfUpcard(card){
+  const r = card[0];
+  if (r === 'A') return 11;
+  if (r === '0') return 10;
+  if (['J','Q','K'].includes(r)) return 10;
+  return parseInt(r,10);
+}
+
+// ----- wire events -----
+dealBtn.addEventListener('click', startDeal);
+hitBtn.addEventListener('click', doHit);
+standBtn.addEventListener('click', doStand);
+doubleBtn.addEventListener('click', doDouble);
+splitBtn.addEventListener('click', doSplit);
+
+// initial render & build shoe
+buildDeck(6);
+render();
