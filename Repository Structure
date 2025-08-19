@@ -1,0 +1,4 @@
+index.html
+script.js
+/cards/2H.png ... AS.png    <-- 52 cards, repeated in JS 6 times for six decks
+/images/table.jpg            <-- casino table background
