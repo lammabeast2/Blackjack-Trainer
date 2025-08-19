@@ -1,219 +1,93 @@
-// =============================
-// Blackjack Trainer JS
-// =============================
-
-// Card Ranks & Suits
-const suits = ["H","D","C","S"];
-const ranks = ["2","3","4","5","6","7","8","9","10","J","Q","K","A"];
-let mode = "free";
-
-// Game State
-let shoe = [];
-let playerHands = []; // Array of hands for splits
-let dealerHand = [];
-let currentHandIndex = 0;
-let runningCount = 0;
-
-// =============================
-// Build & Shuffle 6 decks
-function buildShoe() {
-  shoe = [];
-  for (let d=0; d<6; d++) {
-    for (let s of suits) {
-      for (let r of ranks) {
-        shoe.push(r+s);
-      }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack Trainer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-image: url('images/table.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-family: Arial, sans-serif;
+      color: white;
+      text-align: center;
     }
-  }
-  shuffle(shoe);
-}
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random()*(i+1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-}
+    #tabs {
+      display: flex;
+      justify-content: space-around;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+    }
+    #tabs button {
+      flex: 1;
+      margin: 0 5px;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #006400;
+      color: white;
+    }
+    .tab { display: none; margin-top: 10px; }
+    .cards img { margin: 5px; width: 60px; height: 90px; border-radius: 5px; }
+    #controls button { margin: 5px; padding: 10px; font-size: 16px; border-radius: 5px; background-color: #228B22; color: white; border: none; cursor: pointer; }
+    table { margin: 10px auto; border-collapse: collapse; color: black; background-color: white; }
+    table td, table th { border: 1px solid black; padding: 5px; text-align: center; }
+  </style>
+</head>
+<body>
 
-// =============================
-// Drawing & Values
-function drawCard() {
-  if (shoe.length === 0) buildShoe();
-  let card = shoe.pop();
-  updateCount(card);
-  return card;
-}
-function cardValue(card) {
-  let rank = card.slice(0,-1);
-  if (["J","Q","K"].includes(rank)) return 10;
-  if (rank === "A") return 11;
-  return parseInt(rank);
-}
-function handValue(hand) {
-  let total = 0, aces = 0;
-  for (let c of hand) {
-    total += cardValue(c);
-    if (c.startsWith("A")) aces++;
-  }
-  while (total>21 && aces>0) { total -= 10; aces--; }
-  return total;
-}
+  <div id="tabs">
+    <button onclick="showTab('game')">🃏 Play</button>
+    <button onclick="showTab('strategy')">📊 Strategy</button>
+    <button onclick="showTab('counting')">🔢 Counting</button>
+  </div>
 
-// =============================
-// New Game
-function newGame(selectedMode) {
-  mode = selectedMode;
-  buildShoe();
-  playerHands = [[drawCard(), drawCard()]];
-  currentHandIndex = 0;
-  dealerHand = [drawCard(), drawCard()];
-  render();
-  document.getElementById("result").textContent = "";
-}
+  <!-- Game Tab -->
+  <div id="game" class="tab">
+    <h2>Blackjack Trainer</h2>
+    <div id="table">
+      <div id="dealer">
+        <h3>Dealer</h3>
+        <div id="dealer-cards" class="cards"></div>
+        <p id="dealer-value"></p>
+      </div>
+      <div id="player">
+        <h3>You</h3>
+        <div id="player-cards" class="cards"></div>
+        <p id="player-value"></p>
+      </div>
+    </div>
+    <div id="controls">
+      <button onclick="hit()">Hit</button>
+      <button onclick="stand()">Stand</button>
+      <button onclick="double()">Double</button>
+      <button onclick="split()">Split</button>
+      <button onclick="newGame('free')">New Free Play</button>
+      <button onclick="newGame('practice')">New Practice</button>
+    </div>
+    <p id="result"></p>
+  </div>
 
-// =============================
-// Player Actions
-function hit() {
-  let hand = playerHands[currentHandIndex];
-  hand.push(drawCard());
-  render();
-  if (handValue(hand)>21) {
-    nextHandOrEnd("Bust!");
-  }
-}
-function stand() {
-  nextHandOrEnd("Stand");
-}
-function double() {
-  let hand = playerHands[currentHandIndex];
-  if (hand.length ===2) {
-    hand.push(drawCard());
-    nextHandOrEnd("Double");
-  } else {
-    alert("Double only allowed on first 2 cards!");
-  }
-}
-function split() {
-  let hand = playerHands[currentHandIndex];
-  if (hand.length===2 && hand[0].slice(0,-1)===hand[1].slice(0,-1)) {
-    let newHand = [hand.pop(), drawCard()];
-    hand.push(drawCard());
-    playerHands.splice(currentHandIndex+1,0,newHand);
-    render();
-  } else {
-    alert("Cannot split!");
-  }
-}
+  <!-- Strategy Tab -->
+  <div id="strategy" class="tab">
+    <h2>Basic Strategy Chart</h2>
+    <div id="strategy-chart"></div>
+  </div>
 
-// =============================
-// Handle Hands & Dealer
-function nextHandOrEnd(action) {
-  if (mode==="practice") {
-    document.getElementById("result").textContent = `${action} | ${strategyAdvice(playerHands[currentHandIndex], dealerHand[0])}`;
-  }
-  if (currentHandIndex<playerHands.length-1) {
-    currentHandIndex++;
-    render();
-  } else {
-    dealerPlay();
-  }
-}
+  <!-- Counting Tab -->
+  <div id="counting" class="tab">
+    <h2>Card Counting (Hi-Lo)</h2>
+    <div id="counting-chart"></div>
+    <p><strong>Running Count:</strong> <span id="running-count">0</span></p>
+    <p><strong>True Count:</strong> <span id="true-count">0</span></p>
+  </div>
 
-// Dealer plays
-function dealerPlay() {
-  while (handValue(dealerHand)<17 || (handValue(dealerHand)===17 && dealerHasSoft17(dealerHand))) {
-    dealerHand.push(drawCard());
-  }
-  let results="";
-  playerHands.forEach((hand,i)=>{
-    let pv = handValue(hand);
-    let dv = handValue(dealerHand);
-    if (pv>21) results+=`Hand ${i+1}: Bust! `;
-    else if (dv>21 || pv>dv) results+=`Hand ${i+1}: Win! `;
-    else if (pv===dv) results+=`Hand ${i+1}: Push. `;
-    else results+=`Hand ${i+1}: Lose. `;
-  });
-  document.getElementById("result").textContent = results;
-  render();
-}
-
-function dealerHasSoft17(hand){
-  let total=0, aces=0;
-  for(let c of hand){
-    total+=cardValue(c);
-    if(c.startsWith("A")) aces++;
-  }
-  return total===17 && aces>0;
-}
-
-// =============================
-// Rendering
-function render() {
-  renderHand("player-cards", playerHands[currentHandIndex]);
-  renderHand("dealer-cards", dealerHand);
-  document.getElementById("player-value").textContent = "Total: "+handValue(playerHands[currentHandIndex]);
-  document.getElementById("dealer-value").textContent = "Total: "+handValue(dealerHand);
-  document.getElementById("running-count").textContent = runningCount;
-  document.getElementById("true-count").textContent = (runningCount/(shoe.length/52)).toFixed(2);
-}
-
-function renderHand(divId, hand){
-  const div=document.getElementById(divId);
-  div.innerHTML="";
-  for(let c of hand){
-    const img=document.createElement("img");
-    img.src=`cards/${c}.png`;
-    img.width=60;
-    div.appendChild(img);
-  }
-}
-
-// =============================
-// Basic Strategy Advice (simplified)
-function strategyAdvice(hand,dealerCard){
-  let pv = handValue(hand);
-  let dr = dealerCard.slice(0,-1);
-  if(pv>=17) return "Stand.";
-  if(pv<=11) return "Hit.";
-  if(pv===12 && ["4","5","6"].includes(dr)) return "Stand.";
-  if(pv>=13 && pv<=16 && ["2","3","4","5","6"].includes(dr)) return "Stand.";
-  return "Hit.";
-}
-
-// Render Strategy Chart
-function renderStrategyChart(){
-  let html="<p>Basic Strategy Chart placeholder: hard totals, soft totals, splits.</p>";
-  document.getElementById("strategy-chart").innerHTML=html;
-}
-
-// =============================
-// Card Counting
-function updateCount(card){
-  let rank=card.slice(0,-1);
-  if(["2","3","4","5","6"].includes(rank)) runningCount++;
-  else if(["10","J","Q","K","A"].includes(rank)) runningCount--;
-}
-function renderCountingChart(){
-  document.getElementById("counting-chart").innerHTML=`
-    <table border="1"><tr><th>Card</th><th>Hi-Lo Count</th></tr>
-    <tr><td>2-6</td><td>+1</td></tr>
-    <tr><td>7-9</td><td>0</td></tr>
-    <tr><td>10,Ace</td><td>-1</td></tr>
-    </table>
-  `;
-}
-
-// =============================
-// Tabs
-function showTab(tabName){
-  document.querySelectorAll('.tab').forEach(tab=>tab.style.display="none");
-  document.getElementById(tabName).style.display="block";
-}
-
-// =============================
-// Init
-window.onload=function(){
-  renderStrategyChart();
-  renderCountingChart();
-  newGame("free");
-  showTab("game");
-};
+  <script src="script.js"></script>
+</body>
+</html>
