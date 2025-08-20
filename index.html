@@ -1,93 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blackjack Trainer</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-image: url('images/table.jpg');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      font-family: Arial, sans-serif;
-      color: white;
-      text-align: center;
-    }
-    #tabs {
-      display: flex;
-      justify-content: space-around;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-    }
-    #tabs button {
-      flex: 1;
-      margin: 0 5px;
-      padding: 10px;
-      font-size: 16px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      background-color: #006400;
-      color: white;
-    }
-    .tab { display: none; margin-top: 10px; }
-    .cards img { margin: 5px; width: 60px; height: 90px; border-radius: 5px; }
-    #controls button { margin: 5px; padding: 10px; font-size: 16px; border-radius: 5px; background-color: #228B22; color: white; border: none; cursor: pointer; }
-    table { margin: 10px auto; border-collapse: collapse; color: black; background-color: white; }
-    table td, table th { border: 1px solid black; padding: 5px; text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack Trainer</title>
+<style>
+  body {
+    margin:0;
+    padding:0;
+    background-image: url('images/table.jpg');
+    background-size: cover;
+    background-position: center;
+    font-family: Arial, sans-serif;
+    color: white;
+    text-align: center;
+  }
+  #tabs { display: flex; justify-content: space-around; background: rgba(0,0,0,0.5); padding:10px; }
+  #tabs button { flex:1; margin:0 5px; padding:10px; font-size:16px; border:none; border-radius:5px; cursor:pointer; background-color:#006400; color:white; }
+  .tab { display:none; margin-top:10px; }
+  .cards img { margin:3px; width:60px; height:90px; border-radius:5px; }
+  #controls button { margin:5px; padding:10px; font-size:16px; border-radius:5px; background-color:#228B22; color:white; border:none; cursor:pointer; }
+  table { margin:10px auto; border-collapse: collapse; color:black; background:white; }
+  table td, table th { border:1px solid black; padding:5px; text-align:center; }
+</style>
 </head>
 <body>
 
-  <div id="tabs">
-    <button onclick="showTab('game')">🃏 Play</button>
-    <button onclick="showTab('strategy')">📊 Strategy</button>
-    <button onclick="showTab('counting')">🔢 Counting</button>
-  </div>
+<div id="tabs">
+  <button onclick="showTab('game')">🃏 Play</button>
+  <button onclick="showTab('strategy')">📊 Strategy</button>
+  <button onclick="showTab('counting')">🔢 Counting</button>
+</div>
 
-  <!-- Game Tab -->
-  <div id="game" class="tab">
-    <h2>Blackjack Trainer</h2>
-    <div id="table">
-      <div id="dealer">
-        <h3>Dealer</h3>
-        <div id="dealer-cards" class="cards"></div>
-        <p id="dealer-value"></p>
-      </div>
-      <div id="player">
-        <h3>You</h3>
-        <div id="player-cards" class="cards"></div>
-        <p id="player-value"></p>
-      </div>
+<!-- Game Tab -->
+<div id="game" class="tab">
+  <h2>Blackjack Trainer</h2>
+  <div id="table">
+    <div id="dealer">
+      <h3>Dealer</h3>
+      <div id="dealer-cards" class="cards"></div>
+      <p id="dealer-value"></p>
     </div>
-    <div id="controls">
-      <button onclick="hit()">Hit</button>
-      <button onclick="stand()">Stand</button>
-      <button onclick="double()">Double</button>
-      <button onclick="split()">Split</button>
-      <button onclick="newGame('free')">New Free Play</button>
-      <button onclick="newGame('practice')">New Practice</button>
+    <div id="player">
+      <h3>You</h3>
+      <div id="player-cards" class="cards"></div>
+      <p id="player-value"></p>
     </div>
-    <p id="result"></p>
   </div>
-
-  <!-- Strategy Tab -->
-  <div id="strategy" class="tab">
-    <h2>Basic Strategy Chart</h2>
-    <div id="strategy-chart"></div>
+  <div id="controls">
+    <button onclick="deal()">Deal</button>
+    <button onclick="hit()">Hit</button>
+    <button onclick="stand()">Stand</button>
+    <button onclick="double()">Double</button>
+    <button onclick="split()">Split</button>
   </div>
+  <p id="result"></p>
+  <p id="chips"></p>
+</div>
 
-  <!-- Counting Tab -->
-  <div id="counting" class="tab">
-    <h2>Card Counting (Hi-Lo)</h2>
-    <div id="counting-chart"></div>
-    <p><strong>Running Count:</strong> <span id="running-count">0</span></p>
-    <p><strong>True Count:</strong> <span id="true-count">0</span></p>
-  </div>
+<!-- Strategy Tab -->
+<div id="strategy" class="tab">
+  <h2>Basic Strategy & Card Counting</h2>
+  <div id="strategy-chart"></div>
+  <div id="counting-chart"></div>
+</div>
 
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
